@@ -12,9 +12,9 @@ import (
 //// ====== Structures ======
 
 type TreeNode interface {
-	NewChild() *TreeNode // create and add node as child
-	AddChild(child *TreeNode) // create edge between existing nodes
-	HasChild(child* TreeNode) bool // check for existing edge
+	NewChild() *TreeNode           // create and add node as child
+	AddChild(child *TreeNode)      // create edge between existing nodes
+	HasChild(child *TreeNode) bool // check for existing edge
 }
 
 //// ====== Globals ======

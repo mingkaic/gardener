@@ -5,20 +5,22 @@ package gardener
 import (
 	"fmt"
 	"gopkg.in/eapache/queue.v1"
+	"gopkg.in/fatih/set.v0"
 )
 
 //// ====== Structures ======
 
 type HTMLInfo struct {
-	Pos uint
-	Tag string
+	Pos      uint
+	Tag      string
 	Children []*TreeNode
-	Attrs map[string][]string
+	Attrs    map[string][]string
 }
 
 type MapInfo struct {
-	Tags nodeMap
+	Tags  nodeMap
 	Attrs nodeMap
+	links *set.Interface
 }
 
 type HTMLNode struct {
@@ -30,75 +32,77 @@ type nodeMap map[string][]*HTMLNode
 
 //// ====== Globals ======
 
-var secContent = []string {
+var secContent = []string{
 	"h1", "h2", "h3", "h4", "h5", "h6",
 	"article", "section", "footer", "header", "nav",
 }
 
-var textContent = []string {"div", "hr", "li", "main", "p", "ul"}
+var textContent = []string{"div", "hr", "li", "main", "p", "ul"}
 
-var content = []string {"a", "img", "span", "audio", "video", "source"}
+var content = []string{"a", "img", "span", "audio", "video", "source"}
 
-var tagPool = map[string][]string {
+var tagPool = map[string][]string{
 	"body": append(append(secContent, textContent...), content...),
 
-	"h1": textContent,
-	"h2": textContent,
-	"h3": textContent,
-	"h4": textContent,
-	"h5": textContent,
-	"h6": textContent,
+	"h1":      textContent,
+	"h2":      textContent,
+	"h3":      textContent,
+	"h4":      textContent,
+	"h5":      textContent,
+	"h6":      textContent,
 	"article": append(content, textContent...),
 	"section": append(content, textContent...),
-	"footer": append(content, textContent...),
-	"header": append(content, textContent...),
-	"nav": append(content, textContent...),
+	"footer":  append(content, textContent...),
+	"header":  append(content, textContent...),
+	"nav":     append(content, textContent...),
 
 	"main": append(content, textContent...),
-	"div": append(content, textContent...),
-	"ul": append(content, "li"),
-	"li": content,
-	"hr": {},
-	"p": {},
+	"div":  append(content, textContent...),
+	"ul":   append(content, "li"),
+	"li":   content,
+	"hr":   {},
+	"p":    {},
 
-	"a": {"img", "span", "audio", "video", "source"},
-	"audio": {"source"},
-	"video": {"source"},
+	"a":      {"img", "span", "audio", "video", "source"},
+	"audio":  {"source"},
+	"video":  {"source"},
 	"source": {},
-	"span": {},
-	"img": {},
+	"span":   {},
+	"img":    {},
 }
 
-var attrPool = map[string][]string {
-	"head": {},
-	"body": {},
-	"title": {},
+var commonAttrs = []string{"class", "id"}
 
-	"h1": {},
-	"h2": {},
-	"h3": {},
-	"h4": {},
-	"h5": {},
-	"h6": {},
-	"article": {},
-	"section": {},
-	"footer": {},
-	"header": {},
-	"nav": {},
+var attrPool = map[string][]string{
+	"head":  commonAttrs,
+	"body":  commonAttrs,
+	"title": commonAttrs,
 
-	"main": {},
-	"div": {},
-	"ul": {},
-	"li": {},
-	"hr": {},
-	"p": {},
+	"h1":      commonAttrs,
+	"h2":      commonAttrs,
+	"h3":      commonAttrs,
+	"h4":      commonAttrs,
+	"h5":      commonAttrs,
+	"h6":      commonAttrs,
+	"article": commonAttrs,
+	"section": commonAttrs,
+	"footer":  commonAttrs,
+	"header":  commonAttrs,
+	"nav":     commonAttrs,
 
-	"a": {},
-	"audio": {},
-	"video": {},
-	"source": {},
-	"span": {},
-	"img": {},
+	"main": commonAttrs,
+	"div":  commonAttrs,
+	"ul":   commonAttrs,
+	"li":   append(commonAttrs, "value"),
+	"hr":   commonAttrs,
+	"p":    commonAttrs,
+
+	"a":      append(commonAttrs, "href"),
+	"audio":  append(commonAttrs, "controls"),
+	"img":    append(commonAttrs, "src"),
+	"source": append(commonAttrs, "src"),
+	"span":   commonAttrs,
+	"video":  append(commonAttrs, "controls"),
 }
 
 //// ====== Public ======
@@ -113,7 +117,7 @@ func (this HTMLNode) NewChild() *TreeNode {
 	}
 
 	if this.TreeInfo == nil {
-		this.TreeInfo = &MapInfo{make(nodeMap), make(nodeMap)}
+		this.TreeInfo = &MapInfo{make(nodeMap), make(nodeMap), this.TreeInfo.links}
 		if len(this.Tag) > 0 {
 			this.TreeInfo.Tags[this.Tag] = append(this.TreeInfo.Tags[this.Tag], &this)
 		}
@@ -134,7 +138,16 @@ func (this HTMLNode) NewChild() *TreeNode {
 	var potentialAttrs = attrPool[s.Tag]
 	for _, attr := range potentialAttrs {
 		if gen.Intn(2) == 1 {
-			s.Attrs[attr] = append(s.Attrs[attr], RandString(17))
+			if attr == "href" {
+				links := this.TreeInfo.links
+				if links == nil || (*links).Size() == 0 {
+					s.Attrs[attr] = []string{"#"}
+				} else {
+					s.Attrs[attr] = []string{(*links).Pop().(string)}
+				}
+			} else {
+				s.Attrs[attr] = []string{RandString(17)}
+			}
 			this.TreeInfo.Attrs[attr] = append(this.TreeInfo.Attrs[attr], &s)
 		}
 	}
@@ -148,7 +161,7 @@ func (this HTMLNode) AddChild(child *TreeNode) {
 	this.Children = append(this.Children, child)
 }
 
-func (this HTMLNode) HasChild(child* TreeNode) bool {
+func (this HTMLNode) HasChild(child *TreeNode) bool {
 	has := false
 	n := len(this.Children)
 	for i := 0; i < n && !has; i++ {
@@ -159,8 +172,8 @@ func (this HTMLNode) HasChild(child* TreeNode) bool {
 
 //// Core Functions
 
-func GenerateSite() *HTMLNode {
-	info := &MapInfo{make(nodeMap), make(nodeMap)}
+func GenerateSite(links *set.Interface) *HTMLNode {
+	info := &MapInfo{make(nodeMap), make(nodeMap), links}
 	title := HTMLNode{
 		&HTMLInfo{Tag: "title", Attrs: map[string][]string{}},
 		info}
@@ -187,7 +200,7 @@ func GenerateSite() *HTMLNode {
 	q := queue.New()
 	q.Add(&tHtml)
 	for q.Length() > 0 {
-		var node  = q.Peek()
+		var node = q.Peek()
 		q.Remove()
 		tPtr := node.(*TreeNode)
 		cVal := (*tPtr).(HTMLNode)

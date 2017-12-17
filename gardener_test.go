@@ -1,10 +1,10 @@
 package gardener
 
 import (
-	"testing"
-	"io"
 	"bytes"
 	"golang.org/x/net/html"
+	"io"
+	"testing"
 )
 
 //// ====== Structures ======
@@ -16,7 +16,7 @@ type mockRC struct {
 //// ====== Tests ======
 
 func TestHTMLValid(t *testing.T) {
-	site := GenerateSite()
+	site := GenerateSite(nil)
 	hChild := (*site.Children[0]).(HTMLNode)
 	htmlTxt := ToHTML(&hChild)
 
