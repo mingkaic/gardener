@@ -11,16 +11,18 @@ import (
 // Is the pointer content of SiteNode
 // to persist values after frequent value conversion
 type SiteContent struct {
-	Depth      uint
-	Link, Page string
-	Refs       []*TreeNode
+	Depth uint
+	Link  string
+	Page  *HTMLNode
+	Refs  []*TreeNode
 }
 
 // SiteInfo ...
 // Aggregates Site data for generated site
 // Serves as the Ad Hoc information (expected output) when testing web crawlers
 type SiteInfo struct {
-	Pages PageMap
+	Pages    PageMap
+	MaxDepth uint
 }
 
 // SiteNode ...
@@ -85,14 +87,18 @@ func GenerateSite(nSites uint) *SiteNode {
 	}
 	site.Info.Pages[link] = site.SiteContent
 	var tOrigin TreeNode = site
-	RandGraph(&tOrigin, uint(nSites - 1))
+	RandGraph(&tOrigin, uint(nSites-1))
 
 	// build up Depth, and Page
 	visited := set.NewNonTS()
 	var siteTraversal func(*TreeNode, uint) string
 	siteTraversal = func(node *TreeNode, depth uint) string {
 		page := (*node).(SiteNode)
+		if site.Info.MaxDepth < depth {
+			site.Info.MaxDepth = depth
+		}
 		if !visited.Has(page.Link) {
+			visited.Add(page.Link)
 			page.Depth = depth
 
 			var links set.Interface = set.NewNonTS()
@@ -100,12 +106,15 @@ func GenerateSite(nSites uint) *SiteNode {
 				links.Add(siteTraversal(ref, depth+1))
 			}
 			// number of elements on a page should be significantly higher than number of potential links
-			nElems := nSites * uint(2) + uint(gen.Intn(91))
-			htmlPage := GeneratePage(nElems, links)
-			page.Page = ToHTML(htmlPage)
+			nElems := nSites*uint(2) + uint(gen.Intn(91))
+			page.Page = GeneratePage(nElems, links)
+			if page.Page == nil {
+				panic("Generated nil page")
+			}
 		}
 		return page.Link
 	}
+	siteTraversal(&tOrigin, 0)
 
 	return &site
 }

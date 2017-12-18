@@ -242,6 +242,9 @@ func GeneratePage(nElems uint, links set.Interface) *HTMLNode {
 // ToHTML ...
 // Obtain the HTML string of input HTML tree
 func ToHTML(node *HTMLNode) string {
+	if node == nil {
+		panic("printing nil HTMLNode")
+	}
 	result := ""
 	if len(node.Tag) > 0 {
 		result += "<" + node.Tag

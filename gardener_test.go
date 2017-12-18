@@ -10,15 +10,9 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/net/html"
-	"gopkg.in/fatih/set.v0"
 	"gopkg.in/eapache/queue.v1"
+	"gopkg.in/fatih/set.v0"
 )
-
-//// ====== Structures ======
-
-type mockRC struct {
-	*bytes.Buffer
-}
 
 //// ====== Tests ======
 
@@ -34,7 +28,7 @@ func TestHTMLValid(t *testing.T) {
 	page := GeneratePage(100, nil)
 	htmlTxt := ToHTML(page)
 
-	var rc io.ReadCloser = &mockRC{bytes.NewBufferString(htmlTxt)}
+	var rc io.ReadCloser = &MockRC{bytes.NewBufferString(htmlTxt)}
 	root, err := html.Parse(rc)
 	if err != nil {
 		panic(err)
@@ -102,14 +96,25 @@ func TestSiteValid(t *testing.T) {
 	}
 }
 
-//// ====== Test Utility ======
-
-//// Member of mockRC
-
-// close mock readcloser
-func (rc *mockRC) Close() (err error) {
-	return
+func TestSitePageLinked(t *testing.T) {
+	site := GenerateSite(20)
+	for _, page := range site.Info.Pages {
+		if page.Page == nil {
+			t.Errorf("cannot find page at link %s", page.Link)
+		} else {
+			htmlTxt := ToHTML(page.Page)
+			for _, ref := range page.Refs {
+				rNode := (*ref).(SiteNode)
+				lookup := fmt.Sprintf("href=\"%s\"", rNode.Link)
+				if !strings.Contains(htmlTxt, lookup) {
+					t.Errorf("site %s missing link: %s", page.Link, rNode.Link)
+				}
+			}
+		}
+	}
 }
+
+//// ====== Test Utility ======
 
 //// Check Utility
 
