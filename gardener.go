@@ -11,6 +11,8 @@ import (
 
 //// ====== Structures ======
 
+// TreeNode ...
+// Is the abstract output from the core generation routines
 type TreeNode interface {
 	NewChild() *TreeNode           // create and add node as child
 	AddChild(child *TreeNode)      // create edge between existing nodes
@@ -25,13 +27,10 @@ var tokens = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
 
 //// ====== Public ======
 
-// RandString builds an n sized string
-func RandString(n int) string {
-	s := make([]rune, n)
-	for i := range s {
-		s[i] = tokens[rand.Intn(len(tokens))]
-	}
-	return string(s)
+// Seed ...
+// Seeds the local generator
+func Seed(seed int64) {
+	gen.Seed(seed)
 }
 
 // RandTree ...
@@ -59,9 +58,10 @@ func RandGraph(root *TreeNode, n uint) {
 
 //// ====== Private ======
 
+// build a minimum spanning tree of n nodes connected to root
 func randMinSpanTree(root *TreeNode, n uint) []*TreeNode {
 	src := []*TreeNode{root}
-	var i uint = 1
+	var i uint = 0
 	for i < n {
 		parent := src[0]
 		if len(src) > 1 {
