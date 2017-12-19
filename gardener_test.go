@@ -79,12 +79,12 @@ func TestSiteValid(t *testing.T) {
 	for q.Length() > 0 {
 		curr := q.Remove().(*SiteNode)
 		visited.Add(curr.SiteContent)
-		if page, ok := site.Info.Pages[curr.Link]; ok {
+		if page, ok := site.Info.Pages[curr.FullLink]; ok {
 			if page != curr.SiteContent {
-				t.Errorf("page with %s link is not current page", curr.Link)
+				t.Errorf("page with %s link is not current page", curr.FullLink)
 			}
 		} else {
-			t.Errorf("link %s not found", curr.Link)
+			t.Errorf("link %s not found", curr.FullLink)
 		}
 
 		for _, ref := range curr.Refs {
@@ -100,14 +100,14 @@ func TestSitePageLinked(t *testing.T) {
 	site := GenerateSite(20)
 	for _, page := range site.Info.Pages {
 		if page.Page == nil {
-			t.Errorf("cannot find page at link %s", page.Link)
+			t.Errorf("cannot find page at link %s", page.FullLink)
 		} else {
 			htmlTxt := ToHTML(page.Page)
 			for _, ref := range page.Refs {
 				rNode := (*ref).(SiteNode)
-				lookup := fmt.Sprintf("href=\"%s\"", rNode.Link)
+				lookup := fmt.Sprintf("href=\"%s\"", rNode.FullLink)
 				if !strings.Contains(htmlTxt, lookup) {
-					t.Errorf("site %s missing link: %s", page.Link, rNode.Link)
+					t.Errorf("site %s missing link: %s", page.FullLink, rNode.FullLink)
 				}
 			}
 		}

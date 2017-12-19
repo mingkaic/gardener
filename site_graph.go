@@ -3,6 +3,8 @@ package gardener
 import (
 	"github.com/google/uuid"
 	"gopkg.in/fatih/set.v0"
+	"math/rand"
+	"math"
 )
 
 //// ====== Structures ======
@@ -12,7 +14,7 @@ import (
 // to persist values after frequent value conversion
 type SiteContent struct {
 	Depth uint
-	Link  string
+	Hostname, LinkPath, FullLink string
 	Page  *HTMLNode
 	Refs  []*TreeNode
 }
@@ -23,6 +25,7 @@ type SiteContent struct {
 type SiteInfo struct {
 	Pages    PageMap
 	MaxDepth uint
+	HostList []string
 }
 
 // SiteNode ...
@@ -37,6 +40,10 @@ type SiteNode struct {
 // Associates links to a single HTML page
 type PageMap map[string]*SiteContent
 
+//// ====== Global ======
+
+const protocol = "http"
+
 //// ====== Public ======
 
 //// Members for SiteNode
@@ -44,12 +51,29 @@ type PageMap map[string]*SiteContent
 // NewChild ...
 // Make a new Site and add as reference
 func (this SiteNode) NewChild() *TreeNode {
-	link := uuid.New().String()
+	var hostname string
+	nHosts := uint(len(this.Info.HostList))
+	if nHosts == 0 {
+		hostname = protocol + "://" + uuid.New().String() + ".com"
+		this.Info.HostList = []string{hostname}
+	} else {
+		idx := uint(math.Abs(rand.NormFloat64() * float64(nHosts) / 2))
+		if idx >= nHosts {
+			// add new hostname
+			hostname = protocol + "://" + uuid.New().String() + ".com"
+			this.Info.HostList = append(this.Info.HostList, hostname)
+		} else {
+			// use existing hostname
+			hostname = this.Info.HostList[idx]
+		}
+	}
+
+	linkPath := uuid.New().String()
 	s := SiteNode{
-		&SiteContent{Link: link},
+		&SiteContent{Hostname: hostname, LinkPath: linkPath, FullLink: hostname + "/" + linkPath},
 		this.Info,
 	}
-	this.Info.Pages[link] = s.SiteContent
+	this.Info.Pages[s.FullLink] = s.SiteContent
 
 	var out TreeNode = s
 	this.AddChild(&out)
@@ -80,12 +104,14 @@ func (this SiteNode) HasChild(child *TreeNode) bool {
 // GeneratePage ...
 // Randomly generates a Website graph
 func GenerateSite(nSites uint) *SiteNode {
-	link := uuid.New().String()
+	hostname := protocol + "://" + uuid.New().String() + ".com"
+	linkPath := uuid.New().String()
+	fullLink := hostname + "/" + linkPath
+	content := &SiteContent{Hostname: hostname, LinkPath: linkPath, FullLink: fullLink}
 	site := SiteNode{
-		&SiteContent{Link: link},
-		&SiteInfo{Pages: make(PageMap)},
+		content,
+		&SiteInfo{Pages: PageMap{fullLink: content}, HostList: []string{hostname}},
 	}
-	site.Info.Pages[link] = site.SiteContent
 	var tOrigin TreeNode = site
 	RandGraph(&tOrigin, uint(nSites-1))
 
@@ -97,8 +123,8 @@ func GenerateSite(nSites uint) *SiteNode {
 		if site.Info.MaxDepth < depth {
 			site.Info.MaxDepth = depth
 		}
-		if !visited.Has(page.Link) {
-			visited.Add(page.Link)
+		if !visited.Has(page.FullLink) {
+			visited.Add(page.FullLink)
 			page.Depth = depth
 
 			var links set.Interface = set.NewNonTS()
@@ -112,7 +138,7 @@ func GenerateSite(nSites uint) *SiteNode {
 				panic("Generated nil page")
 			}
 		}
-		return page.Link
+		return page.FullLink
 	}
 	siteTraversal(&tOrigin, 0)
 
