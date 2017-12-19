@@ -1,10 +1,11 @@
 package gardener
 
 import (
+	"math"
+	"math/rand"
+
 	"github.com/google/uuid"
 	"gopkg.in/fatih/set.v0"
-	"math/rand"
-	"math"
 )
 
 //// ====== Structures ======
@@ -13,10 +14,10 @@ import (
 // Is the pointer content of SiteNode
 // to persist values after frequent value conversion
 type SiteContent struct {
-	Depth uint
+	Depth                        uint
 	Hostname, LinkPath, FullLink string
-	Page  *HTMLNode
-	Refs  []*TreeNode
+	Page                         *HTMLNode
+	Refs                         []*TreeNode
 }
 
 // SiteInfo ...
