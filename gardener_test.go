@@ -14,11 +14,18 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
+//// ====== Constants ======
+
+const N_TESTS = 100
+
 //// ====== Tests ======
 
 func TestMain(m *testing.M) {
 	Seed(0)
-	retCode := m.Run()
+	retCode := 0
+	for i := 0; i < N_TESTS && retCode == 0; i++ { // repeat all tests because of randomness
+		retCode = m.Run()
+	}
 	os.Exit(retCode)
 }
 
