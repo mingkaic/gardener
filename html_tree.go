@@ -10,7 +10,9 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
-//// ====== Structures ======
+// =============================================
+//                    Declarations
+// =============================================
 
 // HTMLContent ...
 // Is the pointer content of HTMLNode
@@ -46,7 +48,9 @@ type HTMLNode struct {
 // Maps a string key to many Nodes
 type NodeMap map[string][]*HTMLNode
 
-//// ====== Globals ======
+// =============================================
+//                    Globals
+// =============================================
 
 var secContent = []string{
 	"h1", "h2", "h3", "h4", "h5", "h6",
@@ -121,7 +125,9 @@ var attrPool = map[string][]string{
 	"video":  append(commonAttrs, "controls"),
 }
 
-//// ====== Public ======
+// =============================================
+//                    Public
+// =============================================
 
 //// Member for HTMLNode
 

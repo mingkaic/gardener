@@ -8,7 +8,9 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
-//// ====== Structures ======
+// =============================================
+//                    Declarations
+// =============================================
 
 // SiteContent ...
 // Is the pointer content of SiteNode
@@ -18,6 +20,7 @@ type SiteContent struct {
 	Hostname, LinkPath, FullLink string
 	Page                         *HTMLNode
 	Refs                         []*TreeNode
+	BackLinks                    []*SiteContent
 }
 
 // SiteInfo ...
@@ -41,11 +44,15 @@ type SiteNode struct {
 // Associates links to a single HTML page
 type PageMap map[string]*SiteContent
 
-//// ====== Global ======
+// =============================================
+//                    Globals
+// =============================================
 
 const protocol = "http"
 
-//// ====== Public ======
+// =============================================
+//                    Public
+// =============================================
 
 //// Members for SiteNode
 
@@ -71,7 +78,12 @@ func (this SiteNode) NewChild() *TreeNode {
 
 	linkPath := uuid.New().String()
 	s := SiteNode{
-		&SiteContent{Hostname: hostname, LinkPath: linkPath, FullLink: hostname + "/" + linkPath},
+		&SiteContent{
+			Hostname:  hostname,
+			LinkPath:  linkPath,
+			FullLink:  hostname + "/" + linkPath,
+			BackLinks: []*SiteContent{this.SiteContent},
+		},
 		this.Info,
 	}
 	this.Info.Pages[s.FullLink] = s.SiteContent
@@ -84,6 +96,8 @@ func (this SiteNode) NewChild() *TreeNode {
 // AddChild ...
 // Add an existing SiteNode as reference
 func (this SiteNode) AddChild(child *TreeNode) {
+	sChild := (*child).(SiteNode)
+	sChild.BackLinks = append(sChild.BackLinks, this.SiteContent)
 	this.Refs = append(this.Refs, child)
 }
 

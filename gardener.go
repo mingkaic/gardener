@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-//// ====== Structures ======
+// =============================================
+//                    Declarations
+// =============================================
 
 // TreeNode ...
 // Is the abstract output from the core generation routines
@@ -19,13 +21,17 @@ type TreeNode interface {
 	HasChild(child *TreeNode) bool // check for existing edge
 }
 
-//// ====== Globals ======
+// =============================================
+//                    Globals
+// =============================================
 
 var gen = rand.New(rand.NewSource(time.Now().Unix()))
 
 var tokens = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
-//// ====== Public ======
+// =============================================
+//                    Public
+// =============================================
 
 // Seed ...
 // Seeds the local generator
@@ -56,7 +62,9 @@ func RandGraph(root *TreeNode, n uint) {
 	}
 }
 
-//// ====== Private ======
+// =============================================
+//                    Private
+// =============================================
 
 // build a minimum spanning tree of n nodes connected to root
 func randMinSpanTree(root *TreeNode, n uint) []*TreeNode {
