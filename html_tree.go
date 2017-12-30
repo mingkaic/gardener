@@ -4,6 +4,7 @@ package gardener
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/google/uuid"
 	"gopkg.in/eapache/queue.v1" // this queue isn't threadsafe
@@ -14,20 +15,21 @@ import (
 //                    Declarations
 // =============================================
 
-// HTMLContent ...
+// NodeInfo ...
 // Is the pointer content of HTMLNode
 // to persist values after frequent value conversion
-type HTMLContent struct {
+type NodeInfo struct {
 	Pos      uint
 	Tag      string
 	Children []*TreeNode
 	Attrs    map[string][]string
 }
 
-// HTMLInfo ...
+// PageInfo ...
 // Aggregates DOM data for generated pages
-// Serves as the Ad Hoc information (expected output) when testing web scrapers
-type HTMLInfo struct {
+// During generation, PageInfo is shared for every node
+// It serves as the Ad Hoc information (expected output) when testing web scrapers
+type PageInfo struct {
 	Tags  NodeMap
 	Attrs NodeMap
 
@@ -40,8 +42,8 @@ type HTMLInfo struct {
 // Is a TreeNode implementation and
 // an atomic element of a page
 type HTMLNode struct {
-	*HTMLContent
-	Info *HTMLInfo
+	*NodeInfo
+	Info *PageInfo
 }
 
 // NodeMap ...
@@ -129,11 +131,88 @@ var attrPool = map[string][]string{
 //                    Public
 // =============================================
 
-//// Member for HTMLNode
+//// Gardener Extension
+
+// GeneratePage ...
+// Randomly generates a DOM structure
+// guaranteeing it contains nElems elements and input links
+func (this Gardener) GeneratePage(nElems uint, links set.Interface) *HTMLNode {
+	info := &PageInfo{make(NodeMap), make(NodeMap), links, int(nElems - 4)}
+	title := HTMLNode{
+		&NodeInfo{Tag: "title", Attrs: map[string][]string{}},
+		info}
+	var tTitle TreeNode = title
+	head := HTMLNode{
+		&NodeInfo{Tag: "head", Attrs: make(map[string][]string), Children: []*TreeNode{&tTitle}},
+		info}
+	body := HTMLNode{
+		&NodeInfo{Tag: "body", Attrs: make(map[string][]string)},
+		info}
+	var tHead TreeNode = head
+	var tBody TreeNode = body
+	html := HTMLNode{
+		&NodeInfo{Tag: "html", Attrs: make(map[string][]string), Children: []*TreeNode{&tHead, &tBody}},
+		info}
+	var tHtml TreeNode = html
+	root := &HTMLNode{
+		&NodeInfo{Attrs: make(map[string][]string), Children: []*TreeNode{&tHtml}},
+		info}
+
+	this.RandTree(&tBody, nElems-4)
+
+	var pos uint = 1
+	q := queue.New()
+	q.Add(&tHtml)
+	for q.Length() > 0 {
+		var node = q.Remove()
+		tPtr := node.(*TreeNode)
+		cVal := (*tPtr).(HTMLNode)
+		cVal.Pos = pos
+		pos++
+		for _, child := range cVal.Children {
+			q.Add(child)
+		}
+	}
+
+	return root
+}
+
+//// Public Utility
+
+// ToHTML ...
+// Obtain the HTML string of input HTML tree
+func ToHTML(node *HTMLNode) string {
+	if node == nil {
+		panic("printing nil HTMLNode")
+	}
+	result := ""
+	if len(node.Tag) > 0 {
+		result += "<" + node.Tag
+		for key, val := range node.Attrs {
+			if len(key) > 0 {
+				result += fmt.Sprintf(" %s=\"%s\"", key, val[0])
+			}
+		}
+		result += ">"
+		if attr, ok := node.Attrs[""]; ok {
+			result += attr[0]
+		}
+	}
+	for _, child := range node.Children {
+		hChild := (*child).(HTMLNode)
+		result += ToHTML(&hChild)
+	}
+	if len(node.Tag) > 0 {
+		result += "</" + node.Tag + ">"
+	}
+	return result
+}
+
+//// Methods for HTMLNode
 
 // NewChild ...
 // Make a new HTMLNode and add as child
-func (this HTMLNode) NewChild() *TreeNode {
+func (this HTMLNode) NewChild(gen *rand.Rand) *TreeNode {
 	// check whether this node supports children
 	potentialTags, ok := tagPool[this.Tag]
 	if !ok || len(potentialTags) == 0 {
@@ -145,7 +224,7 @@ func (this HTMLNode) NewChild() *TreeNode {
 	}
 
 	s := HTMLNode{
-		&HTMLContent{Attrs: make(map[string][]string)},
+		&NodeInfo{Attrs: make(map[string][]string)},
 		this.Info,
 	}
 
@@ -194,82 +273,7 @@ func (this HTMLNode) HasChild(child *TreeNode) bool {
 	hChild := (*child).(HTMLNode)
 	for i := 0; i < n && !has; i++ {
 		hThis := (*this.Children[i]).(HTMLNode)
-		has = has || hThis.HTMLContent == hChild.HTMLContent
+		has = has || hThis.NodeInfo == hChild.NodeInfo
 	}
 	return has
-}
-
-//// Core Functions
-
-// GeneratePage ...
-// Randomly generates a DOM structure
-// guaranteeing it contains nElems elements and input links
-func GeneratePage(nElems uint, links set.Interface) *HTMLNode {
-	info := &HTMLInfo{make(NodeMap), make(NodeMap), links, int(nElems - 4)}
-	title := HTMLNode{
-		&HTMLContent{Tag: "title", Attrs: map[string][]string{}},
-		info}
-	var tTitle TreeNode = title
-	head := HTMLNode{
-		&HTMLContent{Tag: "head", Attrs: make(map[string][]string), Children: []*TreeNode{&tTitle}},
-		info}
-	body := HTMLNode{
-		&HTMLContent{Tag: "body", Attrs: make(map[string][]string)},
-		info}
-	var tHead TreeNode = head
-	var tBody TreeNode = body
-	html := HTMLNode{
-		&HTMLContent{Tag: "html", Attrs: make(map[string][]string), Children: []*TreeNode{&tHead, &tBody}},
-		info}
-	var tHtml TreeNode = html
-	root := &HTMLNode{
-		&HTMLContent{Attrs: make(map[string][]string), Children: []*TreeNode{&tHtml}},
-		info}
-
-	RandTree(&tBody, nElems-4)
-
-	var pos uint = 1
-	q := queue.New()
-	q.Add(&tHtml)
-	for q.Length() > 0 {
-		var node = q.Remove()
-		tPtr := node.(*TreeNode)
-		cVal := (*tPtr).(HTMLNode)
-		cVal.Pos = pos
-		pos++
-		for _, child := range cVal.Children {
-			q.Add(child)
-		}
-	}
-
-	return root
-}
-
-// ToHTML ...
-// Obtain the HTML string of input HTML tree
-func ToHTML(node *HTMLNode) string {
-	if node == nil {
-		panic("printing nil HTMLNode")
-	}
-	result := ""
-	if len(node.Tag) > 0 {
-		result += "<" + node.Tag
-		for key, val := range node.Attrs {
-			if len(key) > 0 {
-				result += fmt.Sprintf(" %s=\"%s\"", key, val[0])
-			}
-		}
-		result += ">"
-		if attr, ok := node.Attrs[""]; ok {
-			result += attr[0]
-		}
-	}
-	for _, child := range node.Children {
-		hChild := (*child).(HTMLNode)
-		result += ToHTML(&hChild)
-	}
-	if len(node.Tag) > 0 {
-		result += "</" + node.Tag + ">"
-	}
-	return result
 }

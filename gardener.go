@@ -13,10 +13,14 @@ import (
 //                    Declarations
 // =============================================
 
+type Gardener struct {
+	*rand.Rand
+}
+
 // TreeNode ...
 // Is the abstract output from the core generation routines
 type TreeNode interface {
-	NewChild() *TreeNode           // create and add node as child
+	NewChild(gen *rand.Rand) *TreeNode           // create and add node as child
 	AddChild(child *TreeNode)      // create edge between existing nodes
 	HasChild(child *TreeNode) bool // check for existing edge
 }
@@ -25,34 +29,38 @@ type TreeNode interface {
 //                    Globals
 // =============================================
 
-var gen = rand.New(rand.NewSource(time.Now().Unix()))
-
 var tokens = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 // =============================================
 //                    Public
 // =============================================
 
-// Seed ...
-// Seeds the local generator
-func Seed(seed int64) {
-	gen.Seed(seed)
+// New ...
+// Creates a new Gardener seeding with current time
+func New() *Gardener {
+	return &Gardener{rand.New(rand.NewSource(time.Now().Unix()))}
+}
+
+// NewSeed ...
+// Creates a new Gardener seeding with input
+func NewSeed(seed int64) *Gardener {
+	return &Gardener{rand.New(rand.NewSource(seed))}
 }
 
 // RandTree ...
 // Builds an n node subtree below input root
-func RandTree(root *TreeNode, n uint) {
-	randMinSpanTree(root, n)
+func (this Gardener) RandTree(root *TreeNode, n uint) {
+	randMinSpanTree(this.Rand, root, n)
 }
 
 // RandGraph ...
 // Builds an n node graph attached to root
-func RandGraph(root *TreeNode, n uint) {
-	mst := randMinSpanTree(root, n)
+func (this Gardener) RandGraph(root *TreeNode, n uint) {
+	mst := randMinSpanTree(this.Rand, root, n)
 
 	// connect edges
 	for _, node := range mst {
-		nConns := uint(gen.Intn(int(n)))
+		nConns := uint(this.Intn(int(n)))
 		perms := randChoice(nConns, int(n))
 		for _, idx := range perms {
 			if !(*node).HasChild(mst[idx]) {
@@ -67,7 +75,7 @@ func RandGraph(root *TreeNode, n uint) {
 // =============================================
 
 // build a minimum spanning tree of n nodes connected to root
-func randMinSpanTree(root *TreeNode, n uint) []*TreeNode {
+func randMinSpanTree(gen *rand.Rand, root *TreeNode, n uint) []*TreeNode {
 	src := []*TreeNode{root}
 	var i uint = 0
 	for i < n {
@@ -76,7 +84,7 @@ func randMinSpanTree(root *TreeNode, n uint) []*TreeNode {
 			parent = src[gen.Intn(len(src))]
 		}
 
-		child := (*parent).NewChild()
+		child := (*parent).NewChild(gen)
 		if child != nil {
 			src = append(src, child)
 			i++

@@ -20,12 +20,14 @@ import (
 
 const N_TESTS = 100
 
+var gard *Gardener
+
 // =============================================
 //                    Tests
 // =============================================
 
 func TestMain(m *testing.M) {
-	Seed(0)
+	gard = New()
 	retCode := 0
 	for i := 0; i < N_TESTS && retCode == 0; i++ { // repeat all tests because of randomness
 		retCode = m.Run()
@@ -36,14 +38,12 @@ func TestMain(m *testing.M) {
 // TestHTMLValid ...
 // Ensures generated page is equal to tree parsed by html package
 func TestHTMLValid(t *testing.T) {
-	page := GeneratePage(100, nil)
+	page := gard.GeneratePage(100, nil)
 	htmlTxt := ToHTML(page)
 
 	var rc io.ReadCloser = &MockRC{bytes.NewBufferString(htmlTxt)}
 	root, err := html.Parse(rc)
-	if err != nil {
-		panic(err)
-	}
+	panicCheck(err)
 
 	// expect root is equivalent to page
 	treeCheck(page, root,
@@ -56,11 +56,11 @@ func TestHTMLValid(t *testing.T) {
 // Ensures input links are found in the generated page
 func TestPageLinks(t *testing.T) {
 	var links set.Interface = set.NewNonTS()
-	nLinks := 35 + gen.Intn(25)
+	nLinks := 35 + gard.Intn(25)
 	for i := 0; i < nLinks; i++ {
 		links.Add(uuid.New().String())
 	}
-	site := GeneratePage(150, links)
+	site := gard.GeneratePage(150, links)
 	htmlTxt := ToHTML(site)
 	if site.Info.nRemaining != 0 {
 		t.Errorf("%d remaining links", site.Info.nRemaining)
@@ -82,16 +82,16 @@ func TestPageLinks(t *testing.T) {
 // TestSiteValid ...
 // Ensures generated site makes sense
 func TestSiteValid(t *testing.T) {
-	site := GenerateSite(20)
+	site := gard.GenerateSite(20)
 	// perform a breadth first traversal on site
 	q := queue.New()
 	visited := set.NewNonTS()
 	q.Add(site)
 	for q.Length() > 0 {
 		curr := q.Remove().(*SiteNode)
-		visited.Add(curr.SiteContent)
+		visited.Add(curr.PageNode)
 		if page, ok := site.Info.Pages[curr.FullLink]; ok {
-			if page != curr.SiteContent {
+			if page != curr.PageNode {
 				t.Errorf("page with %s link is not current page", curr.FullLink)
 			}
 		} else {
@@ -100,7 +100,7 @@ func TestSiteValid(t *testing.T) {
 
 		for _, ref := range curr.Refs {
 			sRef := (*ref).(SiteNode)
-			if !visited.Has(sRef.SiteContent) {
+			if !visited.Has(sRef.PageNode) {
 				q.Add(&sRef)
 			}
 		}
@@ -108,7 +108,7 @@ func TestSiteValid(t *testing.T) {
 }
 
 func TestSitePageLinked(t *testing.T) {
-	site := GenerateSite(20)
+	site := gard.GenerateSite(20)
 	for _, page := range site.Info.Pages {
 		if page.Page == nil {
 			t.Errorf("cannot find page at link %s", page.FullLink)

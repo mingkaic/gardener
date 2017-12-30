@@ -17,3 +17,9 @@ type MockRC struct {
 func (rc *MockRC) Close() (err error) {
 	return
 }
+
+func panicCheck(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
