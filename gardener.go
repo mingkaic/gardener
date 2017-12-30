@@ -20,9 +20,9 @@ type Gardener struct {
 // TreeNode ...
 // Is the abstract output from the core generation routines
 type TreeNode interface {
-	NewChild(gen *rand.Rand) *TreeNode           // create and add node as child
-	AddChild(child *TreeNode)      // create edge between existing nodes
-	HasChild(child *TreeNode) bool // check for existing edge
+	NewChild(gen *rand.Rand) *TreeNode // create and add node as child
+	AddChild(child *TreeNode)          // create edge between existing nodes
+	HasChild(child *TreeNode) bool     // check for existing edge
 }
 
 // =============================================
