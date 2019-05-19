@@ -7,7 +7,6 @@ import (
 	"math/rand"
 
 	"github.com/google/uuid"
-	"gopkg.in/eapache/queue.v1" // this queue isn't threadsafe
 )
 
 // =============================================
@@ -20,7 +19,7 @@ import (
 type NodeInfo struct {
 	Pos      uint
 	Tag      string
-	Children []*TreeNode
+	Children []TreeNode
 	Attrs    map[string][]string
 }
 
@@ -137,39 +136,40 @@ var attrPool = map[string][]string{
 // guaranteeing it contains nElems elements and input links
 func (this Gardener) GeneratePage(nElems uint, links map[string]struct{}) *HTMLNode {
 	info := &PageInfo{make(NodeMap), make(NodeMap), links, int(nElems - 4)}
-	title := HTMLNode{
+	title := &HTMLNode{
 		&NodeInfo{Tag: "title", Attrs: map[string][]string{}},
-		info}
+		info,
+	}
 	var tTitle TreeNode = title
-	head := HTMLNode{
-		&NodeInfo{Tag: "head", Attrs: make(map[string][]string), Children: []*TreeNode{&tTitle}},
+	head := &HTMLNode{
+		&NodeInfo{Tag: "head", Attrs: make(map[string][]string), Children: []TreeNode{tTitle}},
 		info}
-	body := HTMLNode{
+	body := &HTMLNode{
 		&NodeInfo{Tag: "body", Attrs: make(map[string][]string)},
 		info}
 	var tHead TreeNode = head
 	var tBody TreeNode = body
-	html := HTMLNode{
-		&NodeInfo{Tag: "html", Attrs: make(map[string][]string), Children: []*TreeNode{&tHead, &tBody}},
-		info}
-	var tHtml TreeNode = html
+	var tHTML TreeNode = &HTMLNode{
+		&NodeInfo{Tag: "html", Attrs: make(map[string][]string), Children: []TreeNode{tHead, tBody}},
+		info,
+	}
 	root := &HTMLNode{
-		&NodeInfo{Attrs: make(map[string][]string), Children: []*TreeNode{&tHtml}},
+		&NodeInfo{Attrs: make(map[string][]string), Children: []TreeNode{tHTML}},
 		info}
 
-	this.RandTree(&tBody, nElems-4)
+	this.RandTree(tBody, nElems-4)
 
 	var pos uint = 1
-	q := queue.New()
-	q.Add(&tHtml)
-	for q.Length() > 0 {
-		var node = q.Remove()
-		tPtr := node.(*TreeNode)
-		cVal := (*tPtr).(HTMLNode)
+	q := make([]TreeNode, 0)
+	q = append(q, tHTML)
+	for len(q) > 0 {
+		var node = q[0]
+		q = q[1:]
+		cVal := node.(*HTMLNode)
 		cVal.Pos = pos
 		pos++
 		for _, child := range cVal.Children {
-			q.Add(child)
+			q = append(q, child)
 		}
 	}
 
@@ -198,8 +198,8 @@ func ToHTML(node *HTMLNode) string {
 		}
 	}
 	for _, child := range node.Children {
-		hChild := (*child).(HTMLNode)
-		result += ToHTML(&hChild)
+		hChild := child.(*HTMLNode)
+		result += ToHTML(hChild)
 	}
 	if len(node.Tag) > 0 {
 		result += "</" + node.Tag + ">"
@@ -211,7 +211,7 @@ func ToHTML(node *HTMLNode) string {
 
 // NewChild ...
 // Make a new HTMLNode and add as child
-func (this HTMLNode) NewChild(gen *rand.Rand) *TreeNode {
+func (this *HTMLNode) NewChild(gen *rand.Rand) TreeNode {
 	// check whether this node supports children
 	potentialTags, ok := tagPool[this.Tag]
 	if !ok || len(potentialTags) == 0 {
@@ -222,7 +222,7 @@ func (this HTMLNode) NewChild(gen *rand.Rand) *TreeNode {
 		panic("NewChild should never have nil Info")
 	}
 
-	s := HTMLNode{
+	s := &HTMLNode{
 		&NodeInfo{Attrs: make(map[string][]string)},
 		this.Info,
 	}
@@ -234,7 +234,7 @@ func (this HTMLNode) NewChild(gen *rand.Rand) *TreeNode {
 		// determine likely tags given this parent
 		s.Tag = potentialTags[gen.Intn(len(potentialTags))]
 	}
-	this.Info.Tags[s.Tag] = append(this.Info.Tags[s.Tag], &s)
+	this.Info.Tags[s.Tag] = append(this.Info.Tags[s.Tag], s)
 
 	var potentialAttrs = attrPool[s.Tag]
 	for _, attr := range potentialAttrs {
@@ -251,33 +251,33 @@ func (this HTMLNode) NewChild(gen *rand.Rand) *TreeNode {
 				s.Attrs[attr] = []string{selLink}
 				delete(links, selLink)
 			}
-			this.Info.Attrs[attr] = append(this.Info.Attrs[attr], &s)
+			this.Info.Attrs[attr] = append(this.Info.Attrs[attr], s)
 		} else if gen.Intn(2) == 1 {
 			s.Attrs[attr] = []string{uuid.New().String()}
-			this.Info.Attrs[attr] = append(this.Info.Attrs[attr], &s)
+			this.Info.Attrs[attr] = append(this.Info.Attrs[attr], s)
 		}
 	}
 	this.Info.nRemaining-- // once this reaches 0, every element generated is an a element
 
 	var out TreeNode = s
-	this.AddChild(&out)
-	return &out
+	this.AddChild(out)
+	return out
 }
 
 // AddChild ...
 // Add an existing HTMLNode as child
-func (this HTMLNode) AddChild(child *TreeNode) {
+func (this *HTMLNode) AddChild(child TreeNode) {
 	this.Children = append(this.Children, child)
 }
 
 // HasChild ...
 // Check if this already have HTMLNode child
-func (this HTMLNode) HasChild(child *TreeNode) bool {
+func (this *HTMLNode) HasChild(child TreeNode) bool {
 	has := false
 	n := len(this.Children)
-	hChild := (*child).(HTMLNode)
+	hChild := child.(*HTMLNode)
 	for i := 0; i < n && !has; i++ {
-		hThis := (*this.Children[i]).(HTMLNode)
+		hThis := this.Children[i].(*HTMLNode)
 		has = has || hThis.NodeInfo == hChild.NodeInfo
 	}
 	return has

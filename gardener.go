@@ -22,9 +22,9 @@ type Gardener struct {
 // TreeNode ...
 // Is the abstract output from the core generation routines
 type TreeNode interface {
-	NewChild(gen *rand.Rand) *TreeNode // create and add node as child
-	AddChild(child *TreeNode)          // create edge between existing nodes
-	HasChild(child *TreeNode) bool     // check for existing edge
+	NewChild(gen *rand.Rand) TreeNode // create and add node as child
+	AddChild(child TreeNode)          // create edge between existing nodes
+	HasChild(child TreeNode) bool     // check for existing edge
 }
 
 // =============================================
@@ -51,13 +51,13 @@ func NewSeed(seed int64) *Gardener {
 
 // RandTree ...
 // Builds an n node subtree below input root
-func (this Gardener) RandTree(root *TreeNode, n uint) {
+func (this Gardener) RandTree(root TreeNode, n uint) {
 	randMinSpanTree(this.Rand, root, n)
 }
 
 // RandGraph ...
 // Builds an n node graph attached to root
-func (this Gardener) RandGraph(root *TreeNode, n uint) {
+func (this Gardener) RandGraph(root TreeNode, n uint) {
 	mst := randMinSpanTree(this.Rand, root, n)
 
 	// connect edges
@@ -65,8 +65,8 @@ func (this Gardener) RandGraph(root *TreeNode, n uint) {
 		nConns := uint(this.Intn(int(n)))
 		perms := randChoice(nConns, int(n))
 		for _, idx := range perms {
-			if !(*node).HasChild(mst[idx]) {
-				(*node).AddChild(mst[idx])
+			if !node.HasChild(mst[idx]) {
+				node.AddChild(mst[idx])
 			}
 		}
 	}
@@ -77,8 +77,8 @@ func (this Gardener) RandGraph(root *TreeNode, n uint) {
 // =============================================
 
 // build a minimum spanning tree of n nodes connected to root
-func randMinSpanTree(gen *rand.Rand, root *TreeNode, n uint) []*TreeNode {
-	src := []*TreeNode{root}
+func randMinSpanTree(gen *rand.Rand, root TreeNode, n uint) []TreeNode {
+	src := []TreeNode{root}
 	var i uint = 0
 	for i < n {
 		parent := src[0]
@@ -86,7 +86,7 @@ func randMinSpanTree(gen *rand.Rand, root *TreeNode, n uint) []*TreeNode {
 			parent = src[gen.Intn(len(src))]
 		}
 
-		child := (*parent).NewChild(gen)
+		child := parent.NewChild(gen)
 		if child != nil {
 			src = append(src, child)
 			i++

@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/net/html"
-	"gopkg.in/eapache/queue.v1"
 )
 
 // =============================================
@@ -81,11 +80,11 @@ func TestPageLinks(t *testing.T) {
 func TestSiteValid(t *testing.T) {
 	site := gard.GenerateSite(20)
 	// perform a breadth first traversal on site
-	q := queue.New()
+	q := []*SiteNode{site}
 	visited := make(map[*PageNode]struct{})
-	q.Add(site)
-	for q.Length() > 0 {
-		curr := q.Remove().(*SiteNode)
+	for len(q) > 0 {
+		curr := q[0]
+		q = q[1:]
 		visited[curr.PageNode] = struct{}{}
 		if page, ok := site.Info.Pages[curr.FullLink]; ok {
 			if page != curr.PageNode {
@@ -96,9 +95,9 @@ func TestSiteValid(t *testing.T) {
 		}
 
 		for _, ref := range curr.Refs {
-			sRef := (*ref).(SiteNode)
+			sRef := ref.(*SiteNode)
 			if _, ok := visited[sRef.PageNode]; !ok {
-				q.Add(&sRef)
+				q = append(q, sRef)
 			}
 		}
 	}
@@ -112,7 +111,7 @@ func TestSitePageLinked(t *testing.T) {
 		} else {
 			htmlTxt := ToHTML(page.Page)
 			for _, ref := range page.Refs {
-				rNode := (*ref).(SiteNode)
+				rNode := ref.(*SiteNode)
 				lookup := fmt.Sprintf("href=\"%s\"", rNode.FullLink)
 				if !strings.Contains(htmlTxt, lookup) {
 					t.Errorf("site %s missing link: %s", page.FullLink, rNode.FullLink)
@@ -144,8 +143,8 @@ func treeCheck(expect *HTMLNode, got *html.Node, errCheck func(msg string, args 
 	} else {
 		i := 0
 		for child := got.FirstChild; child != nil; child = child.NextSibling {
-			eChild := (*expect.Children[i]).(HTMLNode)
-			treeCheck(&eChild, child, errCheck)
+			eChild := expect.Children[i].(*HTMLNode)
+			treeCheck(eChild, child, errCheck)
 			i++
 		}
 	}
