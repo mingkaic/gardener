@@ -51,18 +51,18 @@ func NewSeed(seed int64) *Gardener {
 
 // RandTree ...
 // Builds an n node subtree below input root
-func (this Gardener) RandTree(root TreeNode, n uint) {
-	randMinSpanTree(this.Rand, root, n)
+func (gardener *Gardener) RandTree(root TreeNode, n uint) {
+	randMinSpanTree(gardener.Rand, root, n)
 }
 
 // RandGraph ...
 // Builds an n node graph attached to root
-func (this Gardener) RandGraph(root TreeNode, n uint) {
-	mst := randMinSpanTree(this.Rand, root, n)
+func (gardener *Gardener) RandGraph(root TreeNode, n uint) {
+	mst := randMinSpanTree(gardener.Rand, root, n)
 
 	// connect edges
 	for _, node := range mst {
-		nConns := uint(this.Intn(int(n)))
+		nConns := uint(gardener.Intn(int(n)))
 		perms := randChoice(nConns, int(n))
 		for _, idx := range perms {
 			if !node.HasChild(mst[idx]) {
@@ -79,7 +79,7 @@ func (this Gardener) RandGraph(root TreeNode, n uint) {
 // build a minimum spanning tree of n nodes connected to root
 func randMinSpanTree(gen *rand.Rand, root TreeNode, n uint) []TreeNode {
 	src := []TreeNode{root}
-	var i uint = 0
+	var i uint
 	for i < n {
 		parent := src[0]
 		if len(src) > 1 {

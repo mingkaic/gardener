@@ -16,7 +16,7 @@ import (
 //                    Globals
 // =============================================
 
-const N_TESTS = 100
+const Ntests = 100
 
 var gard *Gardener
 
@@ -27,7 +27,7 @@ var gard *Gardener
 func TestMain(m *testing.M) {
 	gard = New()
 	retCode := 0
-	for i := 0; i < N_TESTS && retCode == 0; i++ { // repeat all tests because of randomness
+	for i := 0; i < Ntests && retCode == 0; i++ { // repeat all tests because of randomness
 		retCode = m.Run()
 	}
 	os.Exit(retCode)

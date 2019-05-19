@@ -134,7 +134,7 @@ var attrPool = map[string][]string{
 // GeneratePage ...
 // Randomly generates a DOM structure
 // guaranteeing it contains nElems elements and input links
-func (this Gardener) GeneratePage(nElems uint, links map[string]struct{}) *HTMLNode {
+func (gardener *Gardener) GeneratePage(nElems uint, links map[string]struct{}) *HTMLNode {
 	info := &PageInfo{make(NodeMap), make(NodeMap), links, int(nElems - 4)}
 	title := &HTMLNode{
 		&NodeInfo{Tag: "title", Attrs: map[string][]string{}},
@@ -157,7 +157,7 @@ func (this Gardener) GeneratePage(nElems uint, links map[string]struct{}) *HTMLN
 		&NodeInfo{Attrs: make(map[string][]string), Children: []TreeNode{tHTML}},
 		info}
 
-	this.RandTree(tBody, nElems-4)
+	gardener.RandTree(tBody, nElems-4)
 
 	var pos uint = 1
 	q := make([]TreeNode, 0)
@@ -211,35 +211,35 @@ func ToHTML(node *HTMLNode) string {
 
 // NewChild ...
 // Make a new HTMLNode and add as child
-func (this *HTMLNode) NewChild(gen *rand.Rand) TreeNode {
-	// check whether this node supports children
-	potentialTags, ok := tagPool[this.Tag]
+func (node *HTMLNode) NewChild(gen *rand.Rand) TreeNode {
+	// check whether node node supports children
+	potentialTags, ok := tagPool[node.Tag]
 	if !ok || len(potentialTags) == 0 {
 		return nil
 	}
 
-	if this.Info == nil {
+	if node.Info == nil {
 		panic("NewChild should never have nil Info")
 	}
 
 	s := &HTMLNode{
 		&NodeInfo{Attrs: make(map[string][]string)},
-		this.Info,
+		node.Info,
 	}
 
 	// if the number of remaining elements to fill is less than the link set use a tag instead
-	if this.Info.links != nil && this.Info.nRemaining <= len(this.Info.links) {
+	if node.Info.links != nil && node.Info.nRemaining <= len(node.Info.links) {
 		s.Tag = "a"
 	} else {
-		// determine likely tags given this parent
+		// determine likely tags given node parent
 		s.Tag = potentialTags[gen.Intn(len(potentialTags))]
 	}
-	this.Info.Tags[s.Tag] = append(this.Info.Tags[s.Tag], s)
+	node.Info.Tags[s.Tag] = append(node.Info.Tags[s.Tag], s)
 
 	var potentialAttrs = attrPool[s.Tag]
 	for _, attr := range potentialAttrs {
 		if attr == "href" { // always assign href
-			links := this.Info.links
+			links := node.Info.links
 			if links == nil || len(links) == 0 {
 				s.Attrs[attr] = []string{"#"}
 			} else {
@@ -251,34 +251,33 @@ func (this *HTMLNode) NewChild(gen *rand.Rand) TreeNode {
 				s.Attrs[attr] = []string{selLink}
 				delete(links, selLink)
 			}
-			this.Info.Attrs[attr] = append(this.Info.Attrs[attr], s)
+			node.Info.Attrs[attr] = append(node.Info.Attrs[attr], s)
 		} else if gen.Intn(2) == 1 {
 			s.Attrs[attr] = []string{uuid.New().String()}
-			this.Info.Attrs[attr] = append(this.Info.Attrs[attr], s)
+			node.Info.Attrs[attr] = append(node.Info.Attrs[attr], s)
 		}
 	}
-	this.Info.nRemaining-- // once this reaches 0, every element generated is an a element
+	node.Info.nRemaining-- // once node reaches 0, every element generated is an a element
 
 	var out TreeNode = s
-	this.AddChild(out)
+	node.AddChild(out)
 	return out
 }
 
 // AddChild ...
 // Add an existing HTMLNode as child
-func (this *HTMLNode) AddChild(child TreeNode) {
-	this.Children = append(this.Children, child)
+func (node *HTMLNode) AddChild(child TreeNode) {
+	node.Children = append(node.Children, child)
 }
 
 // HasChild ...
-// Check if this already have HTMLNode child
-func (this *HTMLNode) HasChild(child TreeNode) bool {
+// Check if node already have HTMLNode child
+func (node *HTMLNode) HasChild(child TreeNode) bool {
 	has := false
-	n := len(this.Children)
+	n := len(node.Children)
 	hChild := child.(*HTMLNode)
 	for i := 0; i < n && !has; i++ {
-		hThis := this.Children[i].(*HTMLNode)
-		has = has || hThis.NodeInfo == hChild.NodeInfo
+		has = has || node.Children[i].(*HTMLNode).NodeInfo == hChild.NodeInfo
 	}
 	return has
 }

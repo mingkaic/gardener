@@ -55,7 +55,7 @@ const protocol = "http"
 
 //// Gardener Extension
 
-// GeneratePage ...
+// GenerateSite ...
 // Randomly generates a Website graph
 func (gardener *Gardener) GenerateSite(nSites uint) *SiteNode {
 	hostname := protocol + "://" + uuid.New().String() + ".com"
