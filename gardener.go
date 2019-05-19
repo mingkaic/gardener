@@ -13,6 +13,8 @@ import (
 //                    Declarations
 // =============================================
 
+// Gardener ...
+// Is the random generator of graphs and trees
 type Gardener struct {
 	*rand.Rand
 }

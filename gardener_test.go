@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/net/html"
 	"gopkg.in/eapache/queue.v1"
-	"gopkg.in/fatih/set.v0"
 )
 
 // =============================================
@@ -55,28 +54,26 @@ func TestHTMLValid(t *testing.T) {
 // TestPageLinks ...
 // Ensures input links are found in the generated page
 func TestPageLinks(t *testing.T) {
-	var links set.Interface = set.NewNonTS()
+	var links = make(map[string]struct{})
 	nLinks := 35 + gard.Intn(25)
 	for i := 0; i < nLinks; i++ {
-		links.Add(uuid.New().String())
+		links[uuid.New().String()] = struct{}{}
 	}
 	site := gard.GeneratePage(150, links)
 	htmlTxt := ToHTML(site)
 	if site.Info.nRemaining != 0 {
 		t.Errorf("%d remaining links", site.Info.nRemaining)
 	}
-	if links.Size() > 0 {
-		t.Errorf("%d links remaining (not used)", links.Size())
+	if len(links) > 0 {
+		t.Errorf("%d links remaining (not used)", len(links))
 	}
 
-	links.Each(func(ilink interface{}) bool {
-		link := ilink.(string)
+	for link := range links {
 		lookup := fmt.Sprintf("href=\"%s\"", link)
 		if !strings.Contains(htmlTxt, lookup) {
 			t.Errorf("missing link: %s", link)
 		}
-		return true
-	})
+	}
 }
 
 // TestSiteValid ...
@@ -85,11 +82,11 @@ func TestSiteValid(t *testing.T) {
 	site := gard.GenerateSite(20)
 	// perform a breadth first traversal on site
 	q := queue.New()
-	visited := set.NewNonTS()
+	visited := make(map[*PageNode]struct{})
 	q.Add(site)
 	for q.Length() > 0 {
 		curr := q.Remove().(*SiteNode)
-		visited.Add(curr.PageNode)
+		visited[curr.PageNode] = struct{}{}
 		if page, ok := site.Info.Pages[curr.FullLink]; ok {
 			if page != curr.PageNode {
 				t.Errorf("page with %s link is not current page", curr.FullLink)
@@ -100,7 +97,7 @@ func TestSiteValid(t *testing.T) {
 
 		for _, ref := range curr.Refs {
 			sRef := (*ref).(SiteNode)
-			if !visited.Has(sRef.PageNode) {
+			if _, ok := visited[sRef.PageNode]; !ok {
 				q.Add(&sRef)
 			}
 		}

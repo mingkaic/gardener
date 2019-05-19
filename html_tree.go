@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"gopkg.in/eapache/queue.v1" // this queue isn't threadsafe
-	"gopkg.in/fatih/set.v0"
 )
 
 // =============================================
@@ -34,7 +33,7 @@ type PageInfo struct {
 	Attrs NodeMap
 
 	// parameters used during DOM construction
-	links      set.Interface
+	links      map[string]struct{}
 	nRemaining int
 }
 
@@ -136,7 +135,7 @@ var attrPool = map[string][]string{
 // GeneratePage ...
 // Randomly generates a DOM structure
 // guaranteeing it contains nElems elements and input links
-func (this Gardener) GeneratePage(nElems uint, links set.Interface) *HTMLNode {
+func (this Gardener) GeneratePage(nElems uint, links map[string]struct{}) *HTMLNode {
 	info := &PageInfo{make(NodeMap), make(NodeMap), links, int(nElems - 4)}
 	title := HTMLNode{
 		&NodeInfo{Tag: "title", Attrs: map[string][]string{}},
@@ -229,7 +228,7 @@ func (this HTMLNode) NewChild(gen *rand.Rand) *TreeNode {
 	}
 
 	// if the number of remaining elements to fill is less than the link set use a tag instead
-	if this.Info.links != nil && this.Info.nRemaining <= this.Info.links.Size() {
+	if this.Info.links != nil && this.Info.nRemaining <= len(this.Info.links) {
 		s.Tag = "a"
 	} else {
 		// determine likely tags given this parent
@@ -241,10 +240,16 @@ func (this HTMLNode) NewChild(gen *rand.Rand) *TreeNode {
 	for _, attr := range potentialAttrs {
 		if attr == "href" { // always assign href
 			links := this.Info.links
-			if links == nil || links.Size() == 0 {
+			if links == nil || len(links) == 0 {
 				s.Attrs[attr] = []string{"#"}
 			} else {
-				s.Attrs[attr] = []string{links.Pop().(string)}
+				var selLink string
+				for link := range links {
+					selLink = link
+					break
+				}
+				s.Attrs[attr] = []string{selLink}
+				delete(links, selLink)
 			}
 			this.Info.Attrs[attr] = append(this.Info.Attrs[attr], &s)
 		} else if gen.Intn(2) == 1 {

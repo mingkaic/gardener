@@ -5,7 +5,6 @@ import (
 	"math/rand"
 
 	"github.com/google/uuid"
-	"gopkg.in/fatih/set.v0"
 )
 
 // =============================================
@@ -71,20 +70,20 @@ func (this Gardener) GenerateSite(nSites uint) *SiteNode {
 	this.RandGraph(&tOrigin, uint(nSites-1))
 
 	// build up Depth, and Page
-	visited := set.NewNonTS()
+	visited := make(map[string]struct{})
 	var siteTraversal func(*TreeNode, uint) string
 	siteTraversal = func(node *TreeNode, depth uint) string {
 		page := (*node).(SiteNode)
 		if site.Info.MaxDepth < depth {
 			site.Info.MaxDepth = depth
 		}
-		if !visited.Has(page.FullLink) {
-			visited.Add(page.FullLink)
+		if _, ok := visited[page.FullLink]; !ok {
+			visited[page.FullLink] = struct{}{}
 			page.Depth = depth
 
-			var links set.Interface = set.NewNonTS()
+			links := make(map[string]struct{})
 			for _, ref := range page.Refs {
-				links.Add(siteTraversal(ref, depth+1))
+				links[siteTraversal(ref, depth+1)] = struct{}{}
 			}
 			// number of elements on a page should be significantly higher than number of potential links
 			nElems := nSites*uint(2) + uint(this.Intn(91))
